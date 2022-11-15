@@ -69,7 +69,7 @@ def process_song_data(spark, input_data, output_data):
 
         logger.info('song_table_path: {}'.format(song_table_path))
 
-        songs_table.mode('overwrite').partitionBy("year","artist_id").parquet(song_table_path)
+        songs_table.write.mode('overwrite').partitionBy("year","artist_id").parquet(song_table_path)
 
         # extract columns for artist table  (artist_id, name, location, lattitude, longitude) 
         artists_table = df_song.select(['artist_id','artist_name','artist_location','artist_latitude','artist_longitude'])
@@ -105,14 +105,14 @@ def process_log_data(spark, input_data, output_data):
         df_log_next_song = df_log.filter(df_log.page == 'NextSong')
 
         # extract columns for user table (user_id, first_name, last_name, gender, level)
-        df_users = df_log_next_song.select(['userId','firstName','lastName','gender','level'])
+        df_users = df_log_next_song.select(['userId','firstName','lastName','gender','level']).dropDuplicates(['userId'])
 
         # write users table to parquet files
         user_table_path = os.path.join(output_data,'users.parquet')
 
         logger.info('user_table_path: {}'.format(user_table_path))
 
-        df_users.write.parquet(user_table_path)
+        df_users.write.mode('overwrite').parquet(user_table_path)
 
 
         # create timestamp column from original timestamp column
@@ -154,7 +154,9 @@ def process_log_data(spark, input_data, output_data):
                 songs_staging.artist_id,
                 logs_staging.sessionId,
                 logs_staging.location,
-                logs_staging.userAgent
+                logs_staging.userAgent,
+                logs_staging.ts_year as year,
+                logs_staging.ts_month as month
             from logs_staging
             left join songs_staging
             on logs_staging.artist=songplays_table.artist_name
@@ -165,8 +167,7 @@ def process_log_data(spark, input_data, output_data):
         logger.info('song_play_path: {}'.format(song_play_path))
 
         # write songplays table to parquet files partitioned by year and month
-        songplays_table.write.mode('overwrite').partitionBy("level").parquet(song_play_path)
-
+        songplays_table.write.mode('overwrite').partitionBy("year","month").parquet(song_play_path)
 
     except Exception as err:
         logger.exception(err)
