@@ -69,7 +69,7 @@ def process_song_data(spark, input_data, output_data):
 
         logger.info('song_table_path: {}'.format(song_table_path))
 
-        songs_table.write.parquet(song_table_path)
+        songs_table.mode('overwrite').partitionBy("year","artist_id").parquet(song_table_path)
 
         # extract columns for artist table  (artist_id, name, location, lattitude, longitude) 
         artists_table = df_song.select(['artist_id','artist_name','artist_location','artist_latitude','artist_longitude'])
@@ -134,7 +134,7 @@ def process_log_data(spark, input_data, output_data):
 
         logger.info('time_table_path: {}'.format(time_table_path))
 
-        time_table.write.mode('overwrite').parquet(time_table_path)
+        time_table.write.mode('overwrite').partitionBy("year","month").parquet(time_table_path)
 
         # read in song data to use for songplays table
         song_path = os.path.join('artifacts','songs.parquet')
